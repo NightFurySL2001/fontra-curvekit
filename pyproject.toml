@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "fontra-curvekit"
+description = "A plugin for Fontra: Scissors, Matchmaker and Curve Point tools for the glyph editor, modelled after popular font and vector editors"
+readme = "README.md"
+keywords = ["font", "fonts"]
+license = {text = "MIT"}
+dependencies = ["fontra"]
+version = "0.1.0"
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Web Environment",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: JavaScript",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Graphics",
+]
+
+
+# Serves src/fontra_curvekit/plugin/ at /curvekit/ on the Fontra server, so the
+# editor plug-in can be added in Application settings › Plugins as "/curvekit".
+[project.entry-points."fontra.webcontent"]
+curvekit = "fontra_curvekit.plugin"
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/fontra_curvekit"]
