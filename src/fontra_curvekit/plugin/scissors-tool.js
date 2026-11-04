@@ -56,7 +56,7 @@ export class ScissorsTool extends PluginTool {
 
   constructor(editor, pluginPath) {
     super(editor, pluginPath);
-    this.iconPath = `${pluginPath}/images/scissors.svg`;
+    this.iconPath = new URL("./images/scissors.svg", import.meta.url).href;
     this.feedback = {};
     registerVisualizationLayer(editor, this.visualizationLayer());
   }

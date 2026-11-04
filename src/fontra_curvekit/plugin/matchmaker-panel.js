@@ -231,7 +231,7 @@ export class MatchmakerPanel extends HTMLElement {
     this.editor = editor;
     this.tool = tool;
     this.identifier = "curvekit-matchmaker";
-    this.iconPath = `${pluginPath}/images/matchmaker.svg`;
+    this.iconPath = new URL("./images/matchmaker.svg", import.meta.url).href;
     this.build();
     tool.addListener(() => this.refresh());
     return this;

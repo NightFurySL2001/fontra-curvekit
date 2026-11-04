@@ -79,7 +79,7 @@ export class MatchmakerTool extends PluginTool {
 
   constructor(editor, pluginPath) {
     super(editor, pluginPath);
-    this.iconPath = `${pluginPath}/images/matchmaker.svg`;
+    this.iconPath = new URL("./images/matchmaker.svg", import.meta.url).href;
     this.viewVector = undefined; // initialized lazily from unitsPerEm
     this.matchWidth = false;
     this.hiddenLayers = new Set(); // layer names hidden in the schematic view

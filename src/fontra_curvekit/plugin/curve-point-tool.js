@@ -52,9 +52,10 @@ class CurvePointToolBase extends PluginTool {
     this.curveType = curveType;
     this.identifier = `${CURVE_POINT_TOOL}-${curveType}`;
     this.title = `Curve Point Tool (${MODE_NAMES[curveType]})`; // like "Pen Tool (cubic)"
-    this.iconPath = `${pluginPath}/images/${
-      curveType === "quad" ? "curve-point-quad" : "curve-point"
-    }.svg`;
+    this.iconPath = new URL(
+      `./images/${curveType === "quad" ? "curve-point-quad" : "curve-point"}.svg`,
+      import.meta.url,
+    ).href;
   }
 
   get feedback() {
