@@ -1,0 +1,6 @@
+{
+  "name": "CurveKit",
+  "description": "Curve-related tools plugin for Fontra glyph editor",
+  "init": "./src/fontra_curvekit/plugin/init.js",
+  "function": "init"
+}

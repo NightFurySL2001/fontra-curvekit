@@ -1,7 +1,7 @@
 {
   "name": "fontra-curvekit",
   "private": true,
-  "description": "Fontra editor plug-in: Scissors, Matchmaker and Curve Point tools",
+  "description": "Curve-related tools plugin for Fontra glyph editor",
   "type": "module",
   "scripts": {
     "test": "node --test"

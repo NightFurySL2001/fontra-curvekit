@@ -1,6 +1,6 @@
 {
   "name": "CurveKit",
-  "description": "New glyph editor tools modelled after popular font and vector editors: Scissors (cut contours), Curve Point (bend segments, convert anchors), and Matchmaker (make masters compatible)",
+  "description": "Curve-related tools plugin for Fontra glyph editor",
   "init": "init.js",
   "function": "init"
 }

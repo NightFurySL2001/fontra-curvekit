@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fontra-curvekit"
-description = "A plugin for Fontra: Scissors, Matchmaker and Curve Point tools for the glyph editor, modelled after popular font and vector editors"
+description = "Curve-related tools plugin for Fontra glyph editor"
 readme = "README.md"
 keywords = ["font", "fonts"]
 license = {text = "MIT"}
