@@ -7,10 +7,34 @@ editor, modelled after popular font and vector editors:
 - **Matchmaker**: make masters compatible
 - **Curve Point**: bend segments and convert anchors
 
-It follows the [Fontra plug-in protocol](https://docs.fontra.xyz/how-tos/writing-plugins/).
+## Install
+
+For public daily usage, you can add `NightFurySL2001/fontra-curvekit` in **Application settings › Plugins**,
+and reload the page. The content is served by Fontra through JSDelivr.
+
+This plugin follows the [Fontra plug-in protocol](https://docs.fontra.xyz/how-tos/writing-plugins/).
 `plugin.json` names `init.js`, and Fontra calls `init(editor, pluginPath)` when the glyph
 editor opens. Like fontra-rcjk, the package also has a `fontra.webcontent` entry point, so
 an installed copy is served by the Fontra server at `/curvekit/`.
+
+For development, you can install it with these ways:
+
+**A. As a Python package (like fontra-rcjk)**: install it in the same environment as
+Fontra, then go to **Application settings › Plugins** and add `/curvekit/`:
+
+```sh
+pip install -e path/to/fontra-curvekit
+```
+
+The trailing slash matters in plugin manager: Fontra treats an address with exactly 
+one `/` as a GitHub `owner/repo`.
+
+**B. As a local plug-in in a Fontra source checkout**: copy or symlink
+`src/fontra_curvekit/plugin` to `fontra/src/fontra/localplugins/curvekit` and add
+`/localplugins/curvekit`. Git ignores that folder.
+
+Fontra caches static files. After you change the plug-in, restart the server and reload with
+the browser cache disabled.
 
 ## Layout
 
@@ -33,30 +57,6 @@ AGENTS.md                      decisions and conventions for coding agents
 Plug-ins can't import Fontra's modules. Everything works on Fontra's editor objects
 (`editor.sceneController`, `editor.visualizationLayers`, and so on) and on the
 "unpacked contours" returned by `path.getUnpackedContour()`.
-
-## Install
-
-Pick one of these options.
-
-**A. As a Python package (like fontra-rcjk)**: install it in the same environment as
-Fontra, then go to **Application settings › Plugins** and add `/curvekit/`:
-
-```sh
-pip install -e path/to/fontra-curvekit
-```
-
-The trailing slash matters: Fontra treats an address with exactly one `/` as a GitHub
-`owner/repo`.
-
-**B. As a local plug-in in a Fontra source checkout**: copy or symlink
-`src/fontra_curvekit/plugin` to `fontra/src/fontra/localplugins/curvekit` and add
-`/localplugins/curvekit`. Git ignores that folder.
-
-**C. Hosted**: publish the contents of `src/fontra_curvekit/plugin` with GitHub Pages and add
-its URL. The server must send CORS headers.
-
-Fontra caches static files. After you change the plug-in, restart the server and reload with
-the browser cache disabled.
 
 ## Scissors
 
