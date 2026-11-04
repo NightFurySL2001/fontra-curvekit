@@ -9,13 +9,15 @@ editor, modelled after popular font and vector editors:
 
 ## Install
 
-For public daily usage, you can add `NightFurySL2001/fontra-curvekit` in **Application settings › Plugins**,
-and reload the page. The content is served by Fontra through JSDelivr.
+For public daily usage, add `NightFurySL2001/fontra-curvekit` in **Application settings
+› Plugins**, then reload the page. Fontra loads the repository through jsDelivr. The
+repository-root [`plugin.json`](plugin.json) points to the implementation under
+`src/fontra_curvekit/plugin/`.
 
 This plugin follows the [Fontra plug-in protocol](https://docs.fontra.xyz/how-tos/writing-plugins/).
-`plugin.json` names `init.js`, and Fontra calls `init(editor, pluginPath)` when the glyph
-editor opens. Like fontra-rcjk, the package also has a `fontra.webcontent` entry point, so
-an installed copy is served by the Fontra server at `/curvekit/`.
+Fontra calls `init(editor, pluginPath)` when the glyph editor opens. The package also has
+a `fontra.webcontent` entry point, so an installed copy is served by the Fontra server at
+`/curvekit/`.
 
 For development, you can install it with these ways:
 
@@ -40,7 +42,7 @@ the browser cache disabled.
 
 ```
 src/fontra_curvekit/plugin/    the editor plug-in (served at /curvekit/)
-  plugin.json                  manifest: { name, description, init, function }
+  plugin.json                  package manifest: { name, description, init, function }
   init.js                      entry point: registers the tools and the panel
   scissors-tool.js             Scissors tool
   matchmaker-tool.js           Matchmaker tool and its schematic view
@@ -51,6 +53,7 @@ src/fontra_curvekit/plugin/    the editor plug-in (served at /curvekit/)
   editor-glue.js               small re-implementations of Fontra helpers
   images/                      tool icons
 tests/                         node:test unit and smoke tests
+plugin.json                    duplicate package manifest for JSDelivr, so the plugin can be served from the repository root
 AGENTS.md                      decisions and conventions for coding agents
 ```
 

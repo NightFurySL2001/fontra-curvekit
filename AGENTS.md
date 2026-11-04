@@ -14,13 +14,21 @@ only exists to serve the plug-in. MIT licensed, like fontra-splitzi.
   through the `fontra.webcontent` entry point.
 - Users add it in **Application settings › Plugins** as `/curvekit/`. The trailing slash
   matters: Fontra reads an address with exactly one `/` as a GitHub `owner/repo`.
+- The standalone jsDelivr manifest is the repository-root `plugin.json`. Its `init` path
+  points to `src/fontra_curvekit/plugin/init.js`; do not move that entry point or assume
+  the repository root is the plug-in directory.
+- Static assets are resolved with `new URL("./images/<name>.svg", import.meta.url).href`,
+  relative to the module that uses them. This is required because `pluginPath` is the
+  plug-in base URL in Fontra, while a jsDelivr deployment may expose the nested source
+  directory below the repository root. The same code must continue to work for both
+  jsDelivr and `/curvekit/`.
 - Identifiers use the `curvekit` prefix: tools `curvekit-<name>-tool` (sub-tools
   `curvekit-curve-point-tool-cubic` / `-quad`), visualization layers
   `curvekit.<name>.<layer>`, the panel `curvekit-matchmaker`.
 
 ## Wording and naming
 
-- **Don't name other products.** No FontLab, Illustrator, Inkscape, Glyphs, and so on, in
+- **Don't name other products.** Don't name third-party font or vector applications in
   code, comments, README, `plugin.json` or `pyproject.toml`. The tools are described as
   "new tools modelled after popular font and vector editors". No links to other
   products' manuals.
