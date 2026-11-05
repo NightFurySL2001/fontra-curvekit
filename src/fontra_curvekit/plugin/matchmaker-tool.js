@@ -33,6 +33,7 @@ import {
   autoMatchContours,
   matchContourOrder,
   matchSegmentRun,
+  matchOuterDirection,
   reverseContour,
   segmentRun,
   setContourStartPoint,
@@ -579,6 +580,8 @@ export class MatchmakerTool extends PluginTool {
   }
 
   // Force match masters. Against the reference master (the selected one):
+  // 0. if a master's outermost contour runs the other way, reverse all its
+  //    contours, so every master follows the same direction convention;
   // 1. reorder each master's contours to match by bounding box, preferring
   //    contours that run the same way;
   // 2. reverse contours that still run the other way;
@@ -587,15 +590,28 @@ export class MatchmakerTool extends PluginTool {
   // So the matched contours correspond and don't spin. One undo step.
   async matchAllMasters() {
     const masters = this.getMasters();
-    if (masters.length < 2) {
+    if (!this.canMatchAllMasters(masters)) {
       return;
     }
     const referenceIndex = this.referenceMasterIndex(masters);
     const reference = masters[referenceIndex].contours;
-    const sameCount = haveSameContourCount(masters);
+
+    // 0. overall direction, from the outermost contour
+    let flippedCount = 0;
+    const directed = masters.map((master, i) => {
+      const flipped =
+        i === referenceIndex
+          ? undefined
+          : matchOuterDirection(reference, master.contours);
+      if (!flipped) {
+        return master;
+      }
+      flippedCount++;
+      return { ...master, contours: flipped };
+    });
 
     // 1. contour order
-    const ordered = reorderedContourLists(masters, referenceIndex);
+    const ordered = reorderedContourLists(directed, referenceIndex);
     const reorderedCount = ordered.reorderedCount;
     let lists = ordered.lists;
 
@@ -657,6 +673,9 @@ export class MatchmakerTool extends PluginTool {
       );
     }
     const parts = [];
+    if (flippedCount) {
+      parts.push(`Reversed all contours in ${flippedCount} master(s).`);
+    }
     if (reorderedCount) {
       parts.push(`Reordered contours in ${reorderedCount} master(s).`);
     }
@@ -671,9 +690,6 @@ export class MatchmakerTool extends PluginTool {
     }
     if (failed.length) {
       parts.push(`Couldn't match contour(s) ${failed.join(", ")}.`);
-    }
-    if (!sameCount) {
-      parts.push("Contour counts differ; fix those by hand.");
     }
     this.message = parts.join(" ") || "Masters are already compatible.";
     this.clearGroups();
@@ -703,6 +719,12 @@ export class MatchmakerTool extends PluginTool {
       ? `Reordered contours in ${reorderedCount} master(s).`
       : "Contours are already in the same order.";
     this.clearGroups();
+  }
+
+  // Needs 2+ masters with the same number of contours. Also enabled when
+  // compatible: it may still reorder contours or align start points.
+  canMatchAllMasters(masters = this.getMasters()) {
+    return masters.length > 1 && haveSameContourCount(masters);
   }
 
   canReorderContours(masters = this.getMasters()) {

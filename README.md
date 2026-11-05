@@ -134,13 +134,18 @@ masters up: it's never changed itself.
     number of contours in every master. One undoable edit.
   - **Force match masters** makes all masters compatible automatically, so the result
     interpolates without contours swapping places or spinning. In one undoable edit, it:
-    1. **reorders** the contours, as **Reorder contours** does. A contour is paired with
-       one running the same way when there is one;
-    2. **reverses** a contour that still runs the other way from its partner;
-    3. **aligns start points**: each closed contour starts at the node from which its
+    1. **matches the overall direction**: if a master's outermost contour runs the other
+       way from the selected master's, all its contours are reversed;
+    2. **reorders** the contours, as **Reorder contours** does. A contour is paired with
+       one running the same way when there is one, and between contours whose boxes
+       can't be told apart, with the one whose node count is closest;
+    3. **reverses** a contour that still runs the other way from its partner;
+    4. **aligns start points**: each closed contour starts at the node from which its
        whole outline, compared inside its own bounding box, best follows the reference's;
-    4. **matches nodes**: missing nodes are inserted by relative arc-length position, and
+    5. **matches nodes**: missing nodes are inserted by relative arc-length position, and
        lines become curves where other masters have curves.
+
+    It needs the same number of contours in every master.
 
     The message says what was done. It also works on masters that are already compatible,
     to fix order, direction and start points.
@@ -201,8 +206,8 @@ change, in the same way Fontra moves points in several layers at once.
   5°), such as the slight slant at the foot of an "a" stem. Only the crossing and junction splits extend strokes into overlapping parts.
 - The Matchmaker only adds nodes and never removes them: there is no segment clean-up.
 - Matchmaker can't fix different contour counts or open/closed mismatches. These are
-  reported in the panel. With different contour counts, **Reorder contours** is disabled
-  and **Force match masters** skips reordering.
+  reported in the panel. With different contour counts, **Reorder contours** and
+  **Force match masters** are disabled.
 - Cubic segments with more than two off-curve points can't be split.
 - The Curve Point tool can't bend quadratic segments with more than one off-curve point.
 - Tooltips are in English only, because plug-ins can't extend Fontra's translations.

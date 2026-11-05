@@ -1649,6 +1649,41 @@ export function reverseContour(contour) {
   };
 }
 
+// Direction (sign of signedArea) of the outermost contour: the largest of the
+// top-level closed contours (those no other contour holds). 0 if none.
+export function outerDirection(contours) {
+  const polygons = contours.map((contour) =>
+    contour.isClosed ? flattenContour(contour) : undefined,
+  );
+  let best = 0;
+  let bestArea = 0;
+  contours.forEach((contour, i) => {
+    if (!polygons[i] || !isTopLevel(polygons, i)) {
+      return;
+    }
+    const area = signedArea(contour);
+    if (Math.abs(area) > bestArea) {
+      bestArea = Math.abs(area);
+      best = Math.sign(area);
+    }
+  });
+  return best;
+}
+
+// If the outermost contour runs the other way from the reference's, every
+// closed contour reversed (each keeps its start node), so the whole master
+// follows the reference's direction convention. Otherwise undefined.
+export function matchOuterDirection(referenceContours, contours) {
+  const a = outerDirection(referenceContours);
+  const b = outerDirection(contours);
+  if (!a || !b || a === b) {
+    return undefined;
+  }
+  return contours.map((contour) =>
+    contour.isClosed ? reverseContour(contour) : contour,
+  );
+}
+
 // A function mapping a relative arc length f (0..1, from the start point) to
 // the point on the outline there. For a closed contour f wraps around.
 function arcLengthSampler(contour) {
@@ -1746,11 +1781,15 @@ export function minCostAssignment(cost) {
 
 const OPEN_CLOSED_PENALTY = 10;
 const DIRECTION_PENALTY = 1;
+// Per node of difference in node count: small, so it only breaks ties
+// between contours the geometry can't tell apart (two identical dots).
+const NODE_COUNT_TIE = 0.001;
 
 // Which contour of `contours` corresponds to each contour of
 // `referenceContours`, judged by their bounding boxes relative to the whole
 // glyph (so masters of different weight and width compare), preferring
 // contours that are both open or both closed and that run the same way.
+// Ties are broken by the difference in on-curve node count.
 // Returns `order` with contours[order[k]] matching referenceContours[k], or
 // undefined if the counts differ.
 export function matchContourOrder(referenceContours, contours) {
@@ -1773,6 +1812,7 @@ export function matchContourOrder(referenceContours, contours) {
         height: max.y - min.y,
         isClosed: contour.isClosed,
         direction: Math.sign(signedArea(contour)),
+        nodeCount: onCurveIndices(contour).length,
       };
     });
   };
@@ -1787,7 +1827,8 @@ export function matchContourOrder(referenceContours, contours) {
         (r.isClosed !== c.isClosed ? OPEN_CLOSED_PENALTY : 0) +
         (r.direction && c.direction && r.direction !== c.direction
           ? DIRECTION_PENALTY
-          : 0),
+          : 0) +
+        NODE_COUNT_TIE * Math.abs(r.nodeCount - c.nodeCount),
     ),
   );
   return minCostAssignment(cost);

@@ -252,7 +252,7 @@ export class MatchmakerPanel extends HTMLElement {
           <button class="align-start" title="Set each master's start point so it lies as many nodes before the selected node as in the selected master">Align start points</button>
           <button class="match-segment">Match segment</button>
           <button class="reorder-contours" title="Put each master's contours in the same order as the selected master's, by their bounding boxes. Nothing else changes">Reorder contours</button>
-          <button class="match-masters" title="Match every master to the selected one: reorder contours, reverse contours that run the other way, align start points, then add nodes and convert lines to curves">Force match masters</button>
+          <button class="match-masters">Force match masters</button>
           <button class="clear-groups">Clear groups</button>
           <button class="reset-view">Reset view angle</button>
         </div>
@@ -291,7 +291,7 @@ export class MatchmakerPanel extends HTMLElement {
           <div class="help-section">
             <div class="help-title">Force match masters</div>
             <ul>
-              <li>Matches every master to the selected one: reorders contours, reverses contours that run the other way, aligns start points, then adds nodes.</li>
+              <li>Matches every master to the selected one: reverses a master whose outermost contour runs the other way, reorders contours, reverses contours that run the other way, aligns start points, then adds nodes. Needs the same number of contours in every master.</li>
               <li><b>Reorder contours</b> does only the first step: it puts each master's contours in the selected master's order, and changes nothing else.</li>
             </ul>
           </div>
@@ -382,8 +382,13 @@ export class MatchmakerPanel extends HTMLElement {
     e.blue.classList.toggle("active", tool.activeGroup === "blue");
     e.orange.classList.toggle("active", tool.activeGroup === "orange");
     e.matchSegment.disabled = !tool.getMatchableRun(visibleMasters);
-    // also when compatible: it may still reorder contours or align starts
-    e.matchMasters.disabled = report.numMasters < 2;
+    e.matchMasters.disabled = !tool.canMatchAllMasters(masters);
+    // a title only to say why it's disabled
+    if (e.matchMasters.disabled && report.numMasters > 1) {
+      e.matchMasters.title = "Contour count doesn't match across masters";
+    } else {
+      e.matchMasters.removeAttribute("title");
+    }
     e.reorderContours.disabled = !tool.canReorderContours(masters);
     e.alignStart.disabled = !tool.canAlignStartPoints(visibleMasters);
     e.message.textContent = tool.message;

@@ -209,10 +209,17 @@ version in the workspace `fontra/` checkout. Check them first when Fontra is upd
   else the first shown master; it isn't changed. Open contours are left alone.
 - **Force match masters** (`matchAllMasters`), against the reference master (the
   selected one, as above), in one undo step:
+  0. overall direction first (the user's request): if a master's outermost contour
+     (largest top-level closed contour, `outerDirection`) runs the other way from the
+     reference's, reverse **all** its closed contours (`matchOuterDirection`). So a
+     master drawn in the opposite convention doesn't lean on the direction penalty
+     for every contour. Message "Reversed all contours in N master(s).";
   1. reorder contours by bounding box relative to the glyph bounds
      (`matchContourOrder`, Hungarian assignment). A direction mismatch only adds a
-     penalty, so a contour pairs with a same-direction partner when there is one; only
-     then
+     penalty, so a contour pairs with a same-direction partner when there is one.
+     Last, a tie-breaker (the user's): `NODE_COUNT_TIE` = 0.001 per on-curve node of
+     difference, small enough not to override the geometry, so of two
+     indistinguishable boxes the one with the closer node count wins. Only then
   2. reverse contours still running the other way (`reverseContour`, keeps the start
      node);
   3. align start points by comparing the whole outline, sampled by arc length, inside
@@ -221,7 +228,9 @@ version in the workspace `fontra/` checkout. Check them first when Fontra is upd
      shifted masters. Ties keep the current start;
   4. `autoMatchContours` (nodes by arc-length fraction, segment types unified).
 
-  It runs on compatible masters too, so the button stays enabled with 2+ masters.
+  It runs on compatible masters too, so the button stays enabled with 2+ masters,
+  but it's **disabled when contour counts differ** (`canMatchAllMasters`, the user's
+  choice; it used to skip reordering and match what it could).
 - **Reorder contours** (`reorderAllContours`) is step 1 alone, sharing
   `reorderedContourLists` with Force match masters. It must not reverse, rotate or add
   nodes.

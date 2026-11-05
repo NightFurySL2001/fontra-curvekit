@@ -757,6 +757,20 @@ describe("MatchmakerTool", () => {
     assert.deepEqual(f.layers.Light.glyph.path.contours[0].points, outerLight.points);
   });
 
+  test("Force match masters reverses a master drawn the other way", async () => {
+    const reversed = (c) => ({ points: [...c.points].reverse(), isClosed: true });
+    f = fakeEditor({
+      Light: [rect(0, 0, 100, 100), reversed(rect(30, 30, 70, 70))],
+      Bold: [reversed(rect(0, 0, 200, 100)), rect(50, 25, 150, 75)],
+    });
+    tool = new MatchmakerTool(f.editor, "/curvekit");
+    tool.activate();
+    await tool.matchAllMasters();
+    assert.match(tool.message, /Reversed all contours in 1 master/);
+    assert.doesNotMatch(tool.message, /Reversed \d+ contour/, "no per-contour reversal left");
+    assert.equal(tool.getReport().compatible, true);
+  });
+
   test("Reorder contours only reorders", async () => {
     const counter = splitSegment(rect(50, 25, 150, 75), 0, 0.5).contour;
     const outer = setContourStartPoint(rect(0, 0, 200, 100), 2);
@@ -785,6 +799,18 @@ describe("MatchmakerTool", () => {
     });
     tool = new MatchmakerTool(f.editor, "/curvekit");
     assert.equal(tool.canReorderContours(), false);
+  });
+
+  test("Force match masters needs the same contour count everywhere", async () => {
+    f = fakeEditor({
+      Light: [rect(0, 0, 100, 100), rect(30, 30, 70, 70)],
+      Bold: [setContourStartPoint(rect(0, 0, 200, 100), 2)],
+    });
+    tool = new MatchmakerTool(f.editor, "/curvekit");
+    tool.activate();
+    assert.equal(tool.canMatchAllMasters(), false);
+    await tool.matchAllMasters();
+    assert.deepEqual(f.undoLabels, [], "no edit");
   });
 
   test("Match Masters fixes the glyph automatically", async () => {

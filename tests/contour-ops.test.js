@@ -22,6 +22,8 @@ import {
   getSegments,
   glyphBounds,
   matchContourOrder,
+  matchOuterDirection,
+  outerDirection,
   matchSegmentRun,
   minCostAssignment,
   nearestSegmentPoint,
@@ -681,6 +683,36 @@ describe("Force match masters: order, direction, start points", () => {
     const ring = rect(0, 0, 100, 100);
     const counter = ccw(rect(2, 2, 98, 98));
     assert.deepEqual(matchContourOrder([ring, counter], [counter, ring]), [1, 0]);
+  });
+
+  test("matchContourOrder breaks ties by node count", () => {
+    // two identical boxes: the one with the same node count wins
+    const plain = rect(0, 0, 100, 100);
+    const extra = splitSegment(rect(0, 0, 100, 100), 0, 0.5).contour; // 5 nodes
+    assert.deepEqual(matchContourOrder([plain, extra], [extra, plain]), [1, 0]);
+    assert.deepEqual(matchContourOrder([extra, plain], [extra, plain]), [0, 1]);
+    // geometry still comes first
+    const far = splitSegment(rect(300, 0, 400, 100), 0, 0.5).contour;
+    assert.deepEqual(matchContourOrder([plain, rect(300, 0, 400, 100)], [far, extra]), [1, 0]);
+  });
+
+  test("outerDirection: the largest top-level contour", () => {
+    const o = [ccw(rect(20, 20, 80, 80)), rect(0, 0, 100, 100)];
+    assert.equal(outerDirection(o), Math.sign(signedArea(rect(0, 0, 1, 1))));
+    assert.equal(outerDirection([]), 0);
+    assert.equal(outerDirection([{ ...rect(0, 0, 9, 9), isClosed: false }]), 0);
+  });
+
+  test("matchOuterDirection reverses a whole master drawn the other way", () => {
+    const light = [rect(0, 0, 100, 100), ccw(rect(20, 20, 80, 80))];
+    const bold = [ccw(rect(0, 0, 200, 100)), rect(30, 20, 170, 80)];
+    const flipped = matchOuterDirection(light, bold);
+    assert.deepEqual(
+      flipped.map((c) => Math.sign(signedArea(c))),
+      light.map((c) => Math.sign(signedArea(c))),
+    );
+    assert.deepEqual(flipped[0].points[0], bold[0].points[0], "keeps the start node");
+    assert.equal(matchOuterDirection(light, light), undefined, "same way: unchanged");
   });
 
   test("alignContourStartsToReference: a spun rectangle in a bold, wide master", () => {
