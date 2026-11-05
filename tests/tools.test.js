@@ -385,6 +385,45 @@ describe("ScissorsTool", () => {
     assert.deepEqual(f.undoLabels, ["Split contour", "Split contour"]);
   });
 
+  test("node-to-node between two side-by-side contours (an 'i' dot and stem) is refused", async () => {
+    // the line between them crosses white space, so the contours aren't joined
+    f = fakeEditor({ Light: [rect(0, 0, 100, 400), rect(0, 500, 100, 600)] });
+    tool = new ScissorsTool(f.editor, "/curvekit");
+    tool.activate();
+    const events = drag([100, 400], [100, 450], [100, 500]);
+    await tool.handleDrag(...events);
+    assert.deepEqual(f.undoLabels, []);
+    assert.equal(f.layers.Light.glyph.path.contours.length, 2);
+  });
+
+  test("a split removes the cut nodes left in the middle of a straight line", async () => {
+    // an L, drag from the inner corner (100,100) to (100,0): a junction split
+    // whose run-on edges continue the stem's and the foot's straight edges
+    const l = {
+      points: [[0, 0], [100, 0], [300, 0], [300, 100], [100, 100], [100, 300], [0, 300]].map(
+        ([x, y]) => ({ x, y }),
+      ),
+      isClosed: true,
+    };
+    f = fakeEditor({ Light: [l] });
+    tool = new ScissorsTool(f.editor, "/curvekit");
+    tool.activate();
+    await tool.handleDrag(...drag([100, 100], [100, 50], [100, 0]));
+    assert.deepEqual(f.undoLabels, ["Split junction"]);
+    const contours = f.layers.Light.glyph.path.contours;
+    assert.equal(contours.length, 2);
+    for (const contour of contours) {
+      const n = contour.points.length;
+      contour.points.forEach((p, i) => {
+        const prev = contour.points[(i - 1 + n) % n];
+        const next = contour.points[(i + 1) % n];
+        const mid =
+          (prev.x - p.x) * (next.y - p.y) === (prev.y - p.y) * (next.x - p.x);
+        assert.ok(!mid, `${p.x},${p.y} is in the middle of a straight line`);
+      });
+    }
+  });
+
   test("marquee pairs nodes across contours and splits the ring", async () => {
     const counter = {
       points: [
@@ -422,7 +461,9 @@ describe("ScissorsTool", () => {
     for (const layer of Object.values(f.layers)) {
       const contours = layer.glyph.path.contours;
       assert.equal(contours.length, 2);
-      assert.ok(contours.every((c) => c.isClosed && c.points.length === 8));
+      // two bars; the corners left in the middle of their straight edges are
+      // removed
+      assert.ok(contours.every((c) => c.isClosed && c.points.length === 4));
     }
   });
 
@@ -440,6 +481,13 @@ describe("ScissorsTool", () => {
     assert.deepEqual(f.undoLabels, ["Split junction"]);
     for (const layer of Object.values(f.layers)) {
       assert.equal(layer.glyph.path.contours.length, 2);
+    }
+    // the bar's bottom edge runs straight across: its corners are gone
+    for (const layer of Object.values(f.layers)) {
+      assert.ok(
+        layer.glyph.path.contours.some((c) => c.points.length === 4),
+        "the bar is a plain rectangle",
+      );
     }
     // the stem runs 50% into the 200-thick bar
     assert.ok(f.layers.Bold.glyph.path.contours[0].points.some((p) => p.x === 400 && p.y === 500));
@@ -895,6 +943,43 @@ describe("CurvePointTool", () => {
     assert.match(cubic.iconPath, /curve-point.svg$/);
     assert.match(quad.iconPath, /curve-point-quad.svg$/);
     assert.ok(f.definitions.some((d) => d.identifier === "curvekit.curve-point.feedback"));
+  });
+
+  test("clicking a line adds straight handles in every layer", async () => {
+    await cubic.handleDrag(...click(0, 50)); // left edge (0,0)-(0,100) of Light
+    assert.deepEqual(f.undoLabels, ["Add handles"]);
+    const light = f.layers.Light.glyph.path.contours[0].points;
+    assert.deepEqual(light.slice(0, 4), [
+      { x: 0, y: 0 },
+      { x: 0, y: 33, type: "cubic" },
+      { x: 0, y: 67, type: "cubic" },
+      { x: 0, y: 100 },
+    ]);
+    // Bold's own line (0,0)-(0,200)
+    const bold = f.layers.Bold.glyph.path.contours[0].points;
+    assert.deepEqual(bold.slice(1, 3).map((p) => [p.x, p.y]), [[0, 67], [0, 133]]);
+  });
+
+  test("clicking a line in quadratic mode adds two quadratic off-curve points", async () => {
+    quad.activate();
+    await quad.handleDrag(...click(0, 50));
+    const light = f.layers.Light.glyph.path.contours[0].points;
+    assert.deepEqual(light.slice(1, 3).map((p) => p.type), ["quad", "quad"]);
+    assert.equal(light.length, 6);
+  });
+
+  test("Shift-clicking a curve turns it back into a plain line", async () => {
+    await cubic.handleDrag(...click(0, 50)); // add straight handles first
+    await cubic.handleDrag(stream(), { ...ev(0, 50), pageX: 0, shiftKey: true });
+    assert.deepEqual(f.undoLabels, ["Add handles", "Straighten segment"]);
+    for (const layer of Object.values(f.layers)) {
+      const [contour] = layer.glyph.path.contours;
+      assert.equal(contour.points.length, 4);
+      assert.ok(contour.points.every((p) => !p.type));
+    }
+    // Shift-clicking a line does nothing
+    await cubic.handleDrag(stream(), { ...ev(0, 50), pageX: 0, shiftKey: true });
+    assert.equal(f.undoLabels.length, 2);
   });
 
   test("dragging a line bends it in every layer, live and as one undo step", async () => {

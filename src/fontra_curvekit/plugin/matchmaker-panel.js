@@ -248,7 +248,7 @@ export class MatchmakerPanel extends HTMLElement {
           <span class="group blue"></span><span class="group orange"></span>
         </div>
         <div class="buttons">
-          <button class="activate" title="Switch to the Matchmaker tool">👁 Matchmaker tool</button>
+          <button class="activate" title="Switch to the Matchmaker tool">${EYE_ICON} Matchmaker tool</button>
           <button class="align-start" title="Set each master's start point so it lies as many nodes before the selected node as in the selected master">Align start points</button>
           <button class="match-segment">Match segment</button>
           <button class="reorder-contours" title="Put each master's contours in the same order as the selected master's, by their bounding boxes. Nothing else changes">Reorder contours</button>

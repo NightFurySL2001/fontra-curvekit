@@ -130,8 +130,14 @@ version in the workspace `fontra/` checkout. Check them first when Fontra is upd
   current mode's type.
 - Click a corner anchor: make it smooth. Click a smooth anchor: retract to a corner.
 - Drag an anchor: pull out symmetric handles. Drag a handle: move it alone (cusp).
-- **Shift-click a handle**: remove all handles of its segment, back to a straight line;
-  both end anchors become corners. A plain click on a handle does nothing.
+- **Click a line**: add straight handles on it at 1/3 and 2/3 (`addStraightHandles`,
+  rounded), so it stays straight. Cubic mode: 2 cubic handles; **quadratic mode: 2 quad
+  off-curve points** (the user's choice, not 1). Undo label "Add handles". A click on a
+  curve does nothing (no undo step). Shift-click is the reverse.
+- **Shift-click a handle or a curve segment**: remove all handles of the segment, back to a
+  straight line (`straightenSegment` / `straightenSegmentAt`); both end anchors become
+  corners. Undo label "Straighten segment". A plain click on a handle does nothing;
+  Shift-click on a line does nothing.
 - Cubic/quadratic modes like the pen tool. The mode only decides the type of curves made
   from lines; existing curves keep their type.
 - Drags are live (`sceneController.editGlyph` + incremental changes) and undo in one step.
@@ -148,6 +154,14 @@ version in the workspace `fontra/` checkout. Check them first when Fontra is upd
   The corners are sorted into index order first, as the marquee finds them; drag order
   would otherwise give the pieces in a different contour order. Only if that doesn't
   apply: split one contour, or join two contours through a slit ("Split contour").
+- **Which contours can be joined** (`canJoinContours` in `canCutBetween`, the user's
+  rule): two different contours running the same way (same `signedArea` sign) **and
+  both at the top level** (no other contour holds all of their outline,
+  `isTopLevel` / `pointInPolygon`) are separate shapes and are refused, even if they
+  overlap: an "i" dot and stem, two overlapping strokes. Opposite directions (outer and
+  counter) join; same-direction contours that aren't both top level join too, like the
+  two counters of 日, so a cut across its middle bar splits it. Marquee stem cuts use
+  the same check when pairing nodes.
 - Marquee with the 4 corners of a crossing: parallel split (`parallelSplitContours`).
 - **Marquee with the 2 corners of a junction** (T, Λ, "e" bar): extension split
   (`extensionSplitContours`).
@@ -159,6 +173,12 @@ version in the workspace `fontra/` checkout. Check them first when Fontra is upd
     edge to where it hits the far side) and join with a flat cap. Never through to the
     far side. Each layer computes its own 50%; `kinds` from the displayed glyph keep the
     structure the same across layers.
+  - **After any Scissors cut or split, cut nodes left mid-line are removed**: 
+    on-curve, both neighbours on-curve, direction change ≤ 5°
+    (`redundantLineNodes`, checked one after another against current neighbours;
+    `removeNodes`). Decided on the displayed glyph and removed by index in every layer
+    (`applyOperations`), so the layers stay compatible. Clicks (cut at a node, insert a
+    node) don't count. Nodes next to curves stay.
   - Edge directions at the corners skip short straight steps (< `STUB_FRACTION` = 25%
     of the corner distance, `edgeDirection`), e.g. the 3-unit notch in Source Han Sans
     "a"; otherwise the extension runs along the notch instead of the curve.

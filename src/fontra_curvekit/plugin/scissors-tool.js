@@ -8,8 +8,12 @@
 //   extending the edges. Otherwise cut along a straight line. On one closed contour
 //   this splits it in two. Between two closed contours (e.g. the outer contour
 //   and a counter of an O or Ø) it joins them through a slit, so a second cut
-//   across the same stroke splits the shape. Green feedback means the cut is
-//   possible, red that it isn't.
+//   across the same stroke splits the shape. Two contours running the same way
+//   that are both at the top level (an "i" dot and stem, overlapping strokes)
+//   are never joined; counters inside one outer contour (日) can be. Green
+//   feedback means the cut is possible, red that it isn't.
+// - After any cut or split, cut nodes left in the middle of a straight line
+//   are removed.
 // - Drag in empty space (marquee): if it holds exactly the four inner corners
 //   of a crossing (X, +, Ø) on closed contours and the edges run on straight
 //   through, split it into two overlapping strokes ("\" and "/"). If it holds
@@ -32,6 +36,8 @@ import {
   isOnCurve,
   nearestSegmentPoint,
   parallelSplitContours,
+  redundantLineNodes,
+  removeNodes,
   splitSegment,
 } from "./contour-ops.js";
 import {
@@ -222,6 +228,18 @@ export class ScissorsTool extends PluginTool {
   // structured differently are skipped.
   async applyOperations(operations, instanceContours, undoLabel) {
     const signatures = instanceContours.map(contourSignature);
+    // Nodes at the cut corners that end up in the middle of a straight line
+    // are removed. Decided on the displayed glyph, then removed by index in
+    // every layer, so the layers stay compatible.
+    // (Marquee stem cuts apply one after another, so each operation's indices
+    // refer to the contours as the previous ones left them.)
+    let displayed = instanceContours;
+    const positions = [];
+    for (const operation of operations) {
+      positions.push(...cutPositions(displayed, operation));
+      displayed = applyOperation(displayed, operation) ?? displayed;
+    }
+    const redundant = redundantLineNodes(displayed, positions);
     this.sceneController.selection = new Set();
     let skippedLayers = [];
     await this.sceneController.editLayersAndRecordChanges((layerGlyphs) => {
@@ -239,7 +257,7 @@ export class ScissorsTool extends PluginTool {
         for (const operation of operations) {
           contours = applyOperation(contours, operation) ?? contours;
         }
-        setAllContours(path, contours);
+        setAllContours(path, removeNodes(contours, redundant));
       }
       return undoLabel;
     });
@@ -535,6 +553,21 @@ function planExtensionSplitForCorners(contours, corners) {
     kinds: result.kinds,
     polylines: result.bridges,
   };
+}
+
+// The positions of a cut's own nodes (the ends of a straight cut, the corners
+// of a split) in the displayed glyph. Clicks don't count: cutting at a node or
+// inserting one keeps it.
+function cutPositions(contours, operation) {
+  const position = ({ contourIndex, pointIndex }) =>
+    contours[contourIndex]?.points[pointIndex];
+  if (operation.kind === "cutBetweenNodes") {
+    return [position(operation.a), position(operation.b)].filter(Boolean);
+  }
+  if (operation.corners) {
+    return operation.corners.map(position).filter(Boolean);
+  }
+  return [];
 }
 
 // Apply one operation to a list of contours; returns the new list, or

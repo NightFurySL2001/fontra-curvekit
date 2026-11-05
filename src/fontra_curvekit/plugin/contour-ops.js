@@ -470,15 +470,118 @@ export function canCutBetween(contours, a, b) {
   }
   if (a.contourIndex === b.contourIndex) {
     const contour = contours[a.contourIndex];
-    return !!contour && canCutBetweenNodes(contour, a.pointIndex, b.pointIndex);
+    return (
+      !!contour && canCutBetweenNodes(contour, a.pointIndex, b.pointIndex)
+    );
   }
-  return [a, b].every(({ contourIndex, pointIndex }) => {
+  const nodesOk = [a, b].every(({ contourIndex, pointIndex }) => {
     const contour = contours[contourIndex];
     return (
       contour?.isClosed &&
       contour.points[pointIndex] &&
       isOnCurve(contour.points[pointIndex])
     );
+  });
+  return nodesOk && canJoinContours(contours, a.contourIndex, b.contourIndex);
+}
+
+// Can two different closed contours be joined through a slit? Not if they run
+// the same way (both clockwise or both anticlockwise) and both are at the top
+// level (inside no other contour): those are separate shapes, such as the dot
+// and the stem of an "i", or two overlapping strokes, even where they overlap.
+// An outer contour and its counter (opposite directions) can be joined, and so
+// can two counters inside the same outer contour (the two of 日).
+export function canJoinContours(contours, indexA, indexB) {
+  const areaA = signedArea(contours[indexA]);
+  const areaB = signedArea(contours[indexB]);
+  if (!areaA || !areaB) {
+    return false;
+  }
+  if (Math.sign(areaA) !== Math.sign(areaB)) {
+    return true;
+  }
+  const polygons = contours.map((contour) =>
+    contour.isClosed ? flattenContour(contour) : undefined,
+  );
+  return !(isTopLevel(polygons, indexA) && isTopLevel(polygons, indexB));
+}
+
+// A contour is at the top level if no other closed contour holds all of it
+function isTopLevel(polygons, index) {
+  return !polygons.some(
+    (polygon, other) =>
+      other !== index &&
+      polygon &&
+      polygons[index].every((p) => pointInPolygon(p, polygon)),
+  );
+}
+
+// Scissors clean-up: after a cut, the nodes at the given positions that now
+// sit in the middle of a straight line (on-curve, both neighbours on-curve,
+// the direction changing by at most `straightAngle` degrees) are redundant.
+// Checked one after another, each against its current neighbours. Returns
+// [{contourIndex, pointIndex}] in the given contours; remove them with
+// removeNodes so every layer loses the same nodes.
+export function redundantLineNodes(contours, positions, straightAngle = 5) {
+  const tolerance = (straightAngle * Math.PI) / 180;
+  const isAt = (p) => positions.some((q) => q.x === p.x && q.y === p.y);
+  const result = [];
+  contours.forEach((contour, contourIndex) => {
+    if (!contour.isClosed) {
+      return;
+    }
+    const alive = contour.points.map(() => true);
+    const n = contour.points.length;
+    const neighbour = (i, step) => {
+      for (let k = 1; k < n; k++) {
+        const j = (i + step * k + n * k) % n;
+        if (alive[j]) {
+          return j;
+        }
+      }
+      return undefined;
+    };
+    contour.points.forEach((p, i) => {
+      if (!isOnCurve(p) || !isAt(p)) {
+        return;
+      }
+      if (alive.filter(Boolean).length <= 3) {
+        return; // keep at least a triangle
+      }
+      const prev = contour.points[neighbour(i, -1)];
+      const next = contour.points[neighbour(i, 1)];
+      if (!prev || !next || !isOnCurve(prev) || !isOnCurve(next)) {
+        return;
+      }
+      const u = subtract(p, prev);
+      const v = subtract(next, p);
+      if (!Math.hypot(u.x, u.y) || !Math.hypot(v.x, v.y)) {
+        return;
+      }
+      if (angleBetween(u, v) <= tolerance) {
+        alive[i] = false;
+        result.push({ contourIndex, pointIndex: i });
+      }
+    });
+  });
+  return result;
+}
+
+// Remove nodes ({contourIndex, pointIndex}) from contours; returns new contours
+export function removeNodes(contours, nodes) {
+  return contours.map((contour, contourIndex) => {
+    const drop = new Set(
+      nodes
+        .filter((node) => node.contourIndex === contourIndex)
+        .map((node) => node.pointIndex),
+    );
+    if (!drop.size) {
+      return contour;
+    }
+    return {
+      ...contour,
+      points: contour.points.filter((_, i) => !drop.has(i)).map(copyPoint),
+    };
   });
 }
 

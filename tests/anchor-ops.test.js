@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
+  addStraightHandles,
   bendSegment,
   makeSmooth,
   moveHandle,
@@ -266,5 +267,35 @@ describe("straightenSegment", () => {
 
   test("refuses an anchor", () => {
     assert.equal(straightenSegment(wave(), 3), undefined);
+  });
+});
+
+describe("addStraightHandles", () => {
+  test("cubic: two handles on the line at 1/3 and 2/3", () => {
+    const after = addStraightHandles(square(), 0); // (0,0)-(0,300)
+    assert.deepEqual(after.points.slice(0, 4), [
+      { x: 0, y: 0 },
+      { x: 0, y: 100, type: "cubic" },
+      { x: 0, y: 200, type: "cubic" },
+      { x: 0, y: 300 },
+    ]);
+    assert.deepEqual(anchors(after), anchors(square()));
+  });
+  test("quadratic: two quad off-curve points", () => {
+    const after = addStraightHandles(square(), 1, { curveType: "quad" }); // (0,300)-(300,300)
+    assert.deepEqual(after.points.slice(2, 4), [
+      { x: 100, y: 300, type: "quad" },
+      { x: 200, y: 300, type: "quad" },
+    ]);
+  });
+  test("the closing line of a closed contour", () => {
+    const after = addStraightHandles(square(), 3); // (300,0)-(0,0)
+    assert.deepEqual(after.points.slice(-2), [
+      { x: 200, y: 0, type: "cubic" },
+      { x: 100, y: 0, type: "cubic" },
+    ]);
+  });
+  test("a curve is left alone", () => {
+    assert.equal(addStraightHandles(wave(), 0), undefined);
   });
 });

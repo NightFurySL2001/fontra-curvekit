@@ -70,6 +70,8 @@ Plug-ins can't import Fontra's modules. Everything works on Fontra's editor obje
 | Drag from one node to another, the 2 corners of a junction | Same as a marquee around those 2 corners (see below): if they're the corners of a junction (T, Λ, "e" bar), it's split by extending the edges, previewed in green. Otherwise it's one of the straight cuts below. |
 | Drag from one node to another, same contour | Splits a closed contour into two closed contours along a straight line. |
 | Drag from one node to another, different contours | Joins two closed contours, such as the outer contour and a counter of an O or Ø, through a zero-width slit along the cut. The fill doesn't change. A second cut across the same stroke then splits the shape into two pieces. |
+
+Two different contours that run the same way (both clockwise or both anticlockwise) and are both at the top level (not inside another contour) are separate shapes, such as the dot and the stem of an "i" or two overlapping strokes: a drag between them is refused (red), even where they overlap. An outer contour and its counter (opposite directions) can be joined, and so can two counters inside the same outer contour, like the two of 日, so cutting across 日's middle bar splits it. After any cut or split, a cut node left in the middle of a straight line (straight segments on both sides, in line within 5°) is removed, so a bar's edge that now runs straight across has no leftover node. Nodes next to a curve are kept.
 | Marquee around the 4 inner corners of a crossing (X, +, Ø) | Splits the crossing into overlapping strokes, such as `\` and `/`. The 4 corners can be on one closed contour or on several; in an Ø they're on the outer contour and both counter halves. Each involved contour is cut at the corners, and the pieces are re-linked across the crossing with straight bridges. Each bridge goes to the corner that best continues its edge. If the edge arrives on a cubic curve and the edge it bridges to leaves on a cubic curve, the bridge is a cubic curve that extends both handles, and both corners become smooth (an Ø's ring and counter close up as smooth curves). Otherwise the bridge is a straight line (the slash edges). The split only happens if, at every corner, the arriving edge, the bridge and the leaving edge are within 40° of each other. Otherwise it falls back to stem cuts. No separate crossover contour is made. For an Ø, do this at both places where the slash crosses the ring to get a separate O and slash. The bridges preview in green. |
 | Marquee around the 2 corners of a junction (T, Λ under a bar, two touching chevrons, an "e" bar running into the bowl) | Splits the junction into overlapping strokes. The marquee must hold exactly 2 nodes on closed contours, either on one contour or on two (in an "e", one corner is on the counter and one on the outer contour). The contours are cut at the corners, and the pieces are re-linked by extending their edges straight on beyond the corners, so the edge arriving at one corner continues out of the other. Corners on one contour give two overlapping contours. Corners on two contours join them into one, where the bar now overlaps the wall. If the edges are in line, a straight bridge joins them, so a bar's edge runs straight across. If the edges converge, they run on to the point where they meet, however deep, as long as that point is inside the outline, such as the apex of a tapered stem or the tip of a chevron. Otherwise (parallel or diverging edges, or a meeting point that would stick out of the outline) both run on 50% of the way across the stroke they enter, measured along the edge to the stroke's far side, and are joined there with a straight cap: a T's stem goes halfway up into the bar, and an "e" bar halfway into the wall. An edge's direction is taken where it reaches the corner, but a short straight step right at the corner (shorter than a quarter of the distance between the two corners, like the notch at the foot of Source Han Sans' "a" stem) is skipped, so the edge runs on along the curve before it. If an edge would run off into nothing, it falls back to stem cuts. The bridges preview in green. |
 | Drag in empty space (marquee) | Cuts the stems inside the rectangle. Nodes of closed contours inside it, on the same or different contours, are paired and cut, closest pair first. A node is used by one cut only. Planned cuts preview in green. |
@@ -177,8 +179,12 @@ Anchors (on-curve points) never move: only handles and the smooth/corner state c
   turn onto a common direction and keep their lengths. Next to a line, the curve's
   handle turns onto the line. Between two lines, both lines become curves.
 - **Drag a handle**: move it on its own. Its anchor becomes a corner.
-- **Shift-click a handle**: remove both handles of its segment, which becomes a straight
-  line again. Its two anchors become corners.
+- **Click a line**: add straight handles. The line becomes a curve whose handles lie on the
+  line at ⅓ and ⅔ of its length, so it still looks straight, ready to shape. In cubic mode
+  that's two cubic handles; in quadratic mode, two quadratic off-curve points. Clicking a
+  curve does nothing.
+- **Shift-click a handle or a curve**: remove both handles of the segment, which becomes a
+  straight line again. Its two anchors become corners. Shift-clicking a line does nothing.
 
 Like the pen tool, the button has two modes (hold it down to choose):
 **Curve Point Tool (cubic)** and **Curve Point Tool (quadratic)**. The mode sets the kind
@@ -191,7 +197,8 @@ change, in the same way Fontra moves points in several layers at once.
 ## Limitations
 
 - Scissors node-to-node and marquee stem cuts close each part with a straight line along
-  the cut. Only the crossing and junction splits extend strokes into overlapping parts.
+  the cut. Removing mid-line nodes can straighten an edge that was almost straight (within
+  5°), such as the slight slant at the foot of an "a" stem. Only the crossing and junction splits extend strokes into overlapping parts.
 - The Matchmaker only adds nodes and never removes them: there is no segment clean-up.
 - Matchmaker can't fix different contour counts or open/closed mismatches. These are
   reported in the panel. With different contour counts, **Reorder contours** is disabled

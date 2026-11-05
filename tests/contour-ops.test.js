@@ -7,6 +7,9 @@ import {
   autoMatchContours,
   canCutBetween,
   canCutBetweenNodes,
+  canJoinContours,
+  redundantLineNodes,
+  removeNodes,
   checkCompatibility,
   contourBounds,
   cutBetweenNodes,
@@ -836,5 +839,67 @@ describe("extensionSplitContours: short steps at a corner", () => {
     const slope = (runOn.y - 70) / (runOn.x - 411);
     assert.ok(Math.abs(slope - 44 / 54) < 0.1, `slope ${slope}`);
     assert.ok(runOn.x > 411 && runOn.x < 446, "stays inside the stem");
+  });
+});
+
+describe("Scissors: joining contours, redundant nodes", () => {
+  const square = (x0, y0, x1, y1) => ({
+    points: [{ x: x0, y: y0 }, { x: x0, y: y1 }, { x: x1, y: y1 }, { x: x1, y: y0 }],
+    isClosed: true,
+  });
+  const reversed = (contour) => ({ ...contour, points: [...contour.points].reverse() });
+  const node = (contourIndex) => ({ contourIndex, pointIndex: 0 });
+  test("an 'i' dot and stem (same direction, top level) can't be joined", () => {
+    const contours = [square(0, 0, 100, 400), square(0, 500, 100, 600)];
+    assert.equal(canJoinContours(contours, 0, 1), false);
+    assert.equal(canCutBetween(contours, node(0), node(1)), false);
+  });
+  test("two overlapping strokes running the same way can't be joined", () => {
+    for (const f of [(c) => c, reversed]) {
+      const contours = [f(square(0, 0, 300, 100)), f(square(100, -100, 200, 300))];
+      assert.equal(canCutBetween(contours, node(0), node(1)), false);
+    }
+  });
+  test("an outer contour and its counter can be joined", () => {
+    const contours = [square(0, 0, 300, 300), reversed(square(100, 100, 200, 200))];
+    assert.equal(canCutBetween(contours, node(0), node(1)), true);
+  });
+  test("the two counters of 日 (same direction, inside the outer) can be joined", () => {
+    const contours = [
+      square(0, 0, 200, 400),
+      reversed(square(50, 50, 150, 175)),
+      reversed(square(50, 225, 150, 350)),
+    ];
+    assert.equal(canJoinContours(contours, 1, 2), true);
+    const at = (ci, x, y) => ({
+      contourIndex: ci,
+      pointIndex: contours[ci].points.findIndex((p) => p.x === x && p.y === y),
+    });
+    // across the middle bar
+    assert.equal(canCutBetween(contours, at(1, 50, 175), at(2, 50, 225)), true);
+  });
+  test("a straight cut along an edge leaves a removable mid-line node", () => {
+    const l = {
+      points: [[0, 0], [100, 0], [300, 0], [300, 100], [100, 100], [100, 300], [0, 300]].map(
+        ([x, y]) => ({ x, y }),
+      ),
+      isClosed: true,
+    };
+    const cut = cutBetweenNodes([l], { contourIndex: 0, pointIndex: 1 }, { contourIndex: 0, pointIndex: 4 });
+    const nodes = redundantLineNodes(cut, [{ x: 100, y: 0 }, { x: 100, y: 100 }]);
+    assert.deepEqual(nodes, [{ contourIndex: 1, pointIndex: 0 }]); // (100,100) on the stem
+    const cleaned = removeNodes(cut, nodes);
+    assert.equal(cleaned[1].points.length, 4);
+    assert.equal(cleaned[0], cut[0], "untouched contours are kept as they are");
+  });
+  test("nodes next to curves are kept", () => {
+    const contour = {
+      points: [
+        { x: 0, y: 0 }, { x: 100, y: 0 }, { x: 150, y: 0, type: "cubic" },
+        { x: 200, y: 50, type: "cubic" }, { x: 200, y: 100 }, { x: 0, y: 100 },
+      ],
+      isClosed: true,
+    };
+    assert.deepEqual(redundantLineNodes([contour], [{ x: 100, y: 0 }]), []);
   });
 });

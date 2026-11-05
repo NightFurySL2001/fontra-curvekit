@@ -2,12 +2,15 @@
 //
 // - Drag a segment (line or curve): it bends so the grabbed spot follows the
 //   pointer. A line becomes a curve.
+// - Click a line: it gets straight handles, lying on the line at 1/3 and 2/3
+//   (two cubic handles, or two quadratic off-curve points in quadratic mode).
+//   It still looks straight, ready to be shaped.
 // - Drag an anchor: pull out symmetric handles; the anchor becomes smooth.
 // - Click an anchor: a smooth anchor becomes a corner (its handles retract), a
 //   corner becomes smooth (its handles line up).
 // - Drag a handle: move it on its own; its anchor becomes a corner.
-// - Shift-click a handle: remove the handles of its segment, which becomes a
-//   straight line.
+// - Shift-click a handle or a curve: remove the handles of the segment, which
+//   becomes a straight line.
 //
 // Anchors never move. Like the pen tool there are two modes, cubic and
 // quadratic, for the curves made out of lines.
@@ -17,12 +20,14 @@
 // structure as the displayed glyph.
 
 import {
+  addStraightHandles,
   bendSegment,
   makeSmooth,
   moveHandle,
   pullHandles,
   retractHandles,
   straightenSegment,
+  straightenSegmentAt,
 } from "./anchor-ops.js";
 import {
   contourSignature,
@@ -109,6 +114,21 @@ class CurvePointToolBase extends PluginTool {
     if (!isDrag) {
       if (hit.kind === "anchor") {
         await this.toggleSmooth(contours, hit);
+      } else if (hit.kind === "segment" && initialEvent.shiftKey) {
+        await this.editLayers(
+          contours,
+          hit.contourIndex,
+          (contour) => straightenSegmentAt(contour, hit.segmentIndex),
+          "Straighten segment"
+        );
+      } else if (hit.kind === "segment") {
+        const options = { curveType: this.curveType };
+        await this.editLayers(
+          contours,
+          hit.contourIndex,
+          (contour) => addStraightHandles(contour, hit.segmentIndex, options),
+          "Add handles"
+        );
       } else if (hit.kind === "handle" && initialEvent.shiftKey) {
         await this.editLayers(
           contours,

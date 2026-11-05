@@ -400,7 +400,33 @@ export function moveHandle(contour, pointIndex, delta) {
   return result;
 }
 
+// --- straight handles on a line ---------------------------------------------------
+
+// Turn line `segmentIndex` into a curve whose handles lie on the line, at 1/3
+// and 2/3 of its length, so it still looks straight but can now be shaped.
+// Cubic: two cubic handles. Quadratic: two quad off-curve points (with an
+// implied on-curve point between them). Rounded to whole units. Returns
+// undefined if the segment isn't a line.
+export function addStraightHandles(contour, segmentIndex, { curveType = "cubic" } = {}) {
+  const info = segmentInfo(contour, segmentIndex);
+  if (info.kind !== "line") {
+    return undefined;
+  }
+  const [a, b] = info.pts;
+  const type = curveType === "quad" ? "quad" : "cubic";
+  const inner = [1 / 3, 2 / 3].map((t) => handle(lerpPoint(a, b, t), type));
+  return setSegmentInner(copyContour(contour), segmentIndex, inner);
+}
+
 // --- straighten a segment ---------------------------------------------------------
+
+// The same for a segment given by its index: undefined if it's already a line
+export function straightenSegmentAt(contour, segmentIndex) {
+  const segment = getSegments(contour)[segmentIndex];
+  return segment?.offIndices.length
+    ? straightenSegment(contour, segment.offIndices[0])
+    : undefined;
+}
 
 // Remove all off-curve points of the segment that off-curve point
 // `pointIndex` belongs to: the segment becomes a straight line. Its two
