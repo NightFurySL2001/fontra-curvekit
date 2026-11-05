@@ -9,8 +9,8 @@ editor, modelled after popular font and vector editors:
 
 ## Install
 
-For public daily usage, add `NightFurySL2001/fontra-curvekit` in **Application settings
-› Plugins**, then reload the page. Fontra loads the repository through jsDelivr. The
+For public daily usage, add `NightFurySL2001/fontra-curvekit` in **Fontra (settings) › Plugin Manager**, 
+then reload the page. Fontra loads the repository through jsDelivr. The
 repository-root [`plugin.json`](plugin.json) points to the implementation under
 `src/fontra_curvekit/plugin/`.
 
@@ -22,7 +22,7 @@ a `fontra.webcontent` entry point, so an installed copy is served by the Fontra 
 For development, you can install it with these ways:
 
 **A. As a Python package (like fontra-rcjk)**: install it in the same environment as
-Fontra, then go to **Application settings › Plugins** and add `/curvekit/`:
+Fontra, then go to **Fontra (settings) › Plugin Manager** and add `/curvekit/`:
 
 ```sh
 pip install -e path/to/fontra-curvekit
